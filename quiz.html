@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+@import url(https://fonts.googleapis.com/css?family=Work+Sans:300,600);
+
+body{
+	font-size: 20px;
+	font-family: 'Work Sans', sans-serif;
+	color: #333;
+  font-weight: 300;
+  text-align: left;
+  background-color: #f8f6f0;
+}
+h1{
+  font-weight: 300;
+  margin: 0px;
+  padding: 10px;
+  font-size: 20px;
+  background-color: #444;
+  color: #fff;
+}
+.question{
+  font-size: 30px;
+  margin-bottom: 10px;
+}
+.answers {
+  margin-bottom: 20px;
+  text-align: left;
+  display: inline-block;
+}
+.answers label{
+  display: block;
+  margin-bottom: 10px;
+}
+button{
+  font-family: 'Work Sans', sans-serif;
+	font-size: 22px;
+	background-color: #279;
+	color: #fff;
+	border: 0px;
+	border-radius: 3px;
+	padding: 20px;
+	cursor: pointer;
+	margin-bottom: 20px;
+}
+button:hover{
+	background-color: #38a;
+}
+
+.slide{
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 100%;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+.active-slide{
+  opacity: 1;
+  z-index: 2;
+}
+.quiz-container{
+  position: relative;
+  height: 200px;
+  margin-top: 40px;
+}
+
+</style>
+
+</head>
+<body>
+
+<h1>Quiz on Important Facts</h1>
+<div class="quiz-container">
+  <div id="quiz"></div>
+</div>
+<table style="width:60%">
+    <tr>
+		<td><button id="btn-start" type="button"> Bắt đầu</button></td>
+		<td><button id="previous">Previous Question</button></td>
+		<td><h4 id="question-timer">00:00</h4></td></td>
+		<td><button id="next">Next Question</button></td>
+		<td><button id="submit">Submit Quiz</button></td>
+  </tr>
+</table>
+
+<div class="container">
+  <h2>Basic Modal Example</h2>
+  <!-- Trigger the modal with a button -->
+  <button type="button" class="btn btn-info btn-lg" data-toggle="modal" data-target="#myModal">Open Modal</button>
+
+  <!-- Modal -->
+  <div class="modal fade" id="myModal" role="dialog">
+    <div class="modal-dialog">
+    
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+          <h4 class="modal-title">Modal Header</h4>
+        </div>
+        <div class="modal-body">
+          <p>Some text in the modal.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  
+</div>
+
+<div id="results"></div>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+  var secondTest = '5';
+  var count=1320;
+  var finished = false;
+  var firstLoad = true;
+  var questionTime = 0;
+  var questionTimerInterval;
+  var rightAnswers = '';
+  var userAnswers = new Array(34);
+  var questionLst;
+  var reviewMode = false;
+  var started = false;
+  var totalQuestionNumber = 35;
+  var allQuestion='';
+  var allQuestionIdx = 0;
+  var failQuestions = ',17,18,19,20,21,22,23,24,25,26,27,28,29,30,33,35,36,37,40,43,45,46,47,48,49,50,51,52,53,84,91,99,101,109,112,114,118,119,143,145,147,150,153,154,161,199,209,210,211,214,221,227,231,242,245,248,258,260,261,262,';
+  var totalPassAnswer = 32;
+  window.onbeforeunload = function (event) {
+    if (!finished) {
+      return "Câu trả lời hoặc những thay đổi sẽ không được lưu. Bạn có muốn tiếp tục?";
+    } else {
+      return;
+    }
+  };
+
+  $(document).ready(function(){
+     $('#btn-start').click(function () {
+              started = true;
+
+              setTimeout(function () {
+                  $('#btn-start').hide();
+              }, 100);
+              //start timer after 1 seconds
+              setTimeout(function () {
+                  questionTimerInterval = setInterval(countTimer, 1000);
+              }, 1000);
+              timer();
+          });
+  });
+
+  function timer()
+  {
+    count=count-1;
+    if (count <= 0)
+    {
+       clearInterval(counter);
+       return;
+    }
+
+    $('#timer').html(formatSeconds(count)); // watch for spelling
+  }
+  function showNextKit() {
+    window.location='/bo-de-thi';
+  }
+  function finish() {
+    if (confirm('Bạn muốn kết thúc phần thi và xem kết quả?')) {
+      //secondTest = 0;
+      finished = true;
+    }
+  }
+  function countTimer() {
+
+    secondTest--;
+    $('#question-timer').html(formatSeconds(secondTest));
+    if (secondTest==0 || finished)   //20 minutes: 60 * 60 * 20
+    {
+      finished = true;
+      clearInterval(questionTimerInterval);
+      //Get user answers
+      $('.question-exam input:checked').each(function (index, element) {
+        //debugger
+        //600 question has only answer for a question
+        if (index === 0) {
+          //debugger
+          userAnswers[$('.qn').data('index')] = { 'answer': $(element).attr('id'), 'questionnumber': $('.qn').data('questionnumber') };
+        }
+        else {
+          //userAnswers[$('.qn').data('index')] += '-'+$(element).attr('id');
+        }
+      });
+
+      rightAnswers = rightAnswers.substr(0, rightAnswers.length - 1);
+      var rightArr = rightAnswers.split(',');
+      var rWrongArr = Array();
+      var failAnswer = -1;
+      for (var idx = 0; idx < rightArr.length; idx++) {
+        if (userAnswers[idx]==undefined || rightArr[idx] != userAnswers[idx].answer) {
+          //If has fail question => failed all
+          if (userAnswers[idx]!= undefined && failQuestions.lastIndexOf(',' + userAnswers[idx].questionnumber + ',') >= 0) failAnswer = idx + 1;
+          rWrongArr.push(idx);
+        }
+      }
+
+      var score = (rightArr.length - rWrongArr.length) + '/' + rightArr.length;
+      if (rightArr.length - rWrongArr.length >= totalPassAnswer && failAnswer == -1) {
+        $('#score-message').html('Điểm thi ' + score + ' câu. Chúc mừng bạn đã thi đậu.');
+        $('#score-message').addClass('text-success');
+      }
+      else {
+        $('#score-message').html('Điểm thi ' + score + ' câu.Bạn thi chưa đạt, nên luyện thêm.');
+        if (failAnswer > -1) $('#score-message').append('<br/>Sai câu điểm liệt: Câu ' + failAnswer.toString());
+        $('#score-message').addClass('text-danger');
+      }
+      if (rWrongArr.length===0) {
+        $('#btn-wrong').hide();
+      }
+      else {
+        $('#btn-wrong').show();
+      }
+      $('#modal-result').modal('show');
+    }
+  }
+
+  function formatSeconds(seconds)
+  {
+    if(seconds.toString().trim() == '') return '';
+    var date = new Date(1970,0,1);
+    date.setSeconds(seconds);
+    var dateTimeArr = date.toTimeString().replace(/.*(\d{2}:\d{2}:\d{2}).*/, "$1").split(':');
+    if(dateTimeArr[0] == '00')
+    {
+      return dateTimeArr[1]+':'+dateTimeArr[2];
+    }
+    else
+    {
+      return parseInt(dateTimeArr[0]).toString()+':'+dateTimeArr[1]+':'+dateTimeArr[2];
+    }
+  }
+  function viewWrongAnswer() {
+    $('#btn-finish').hide();
+    $('#btn-next-kit').show();
+    reviewMode = true;
+
+    $('#modal-result').modal('hide');
+  }
+</script>  
+<script>
+     
+
+(function(){
+  // Functions
+  function buildQuiz(){
+    // variable to store the HTML output
+    const output = [];
+
+    // for each question...
+    myQuestions.forEach(
+      (currentQuestion, questionNumber) => {
+
+        // variable to store the list of possible answers
+        const answers = [];
+
+        // and for each available answer...
+        for(letter in currentQuestion.answers){
+
+          // ...add an HTML radio button
+          answers.push(
+            `<label>
+              <input type="radio" name="question${questionNumber}" value="${letter}">
+              ${letter} :
+              ${currentQuestion.answers[letter]}
+            </label>`
+          );
+        }
+
+        // add this question and its answers to the output
+        output.push(
+          `<div class="slide">
+            <div class="question"> ${currentQuestion.question} </div>
+            <div class="answers"> ${answers.join("")} </div>
+          </div>`
+        );
+      }
+    );
+
+    // finally combine our output list into one string of HTML and put it on the page
+    quizContainer.innerHTML = output.join('');
+  }
+
+  function showResults(){
+
+    // gather answer containers from our quiz
+    const answerContainers = quizContainer.querySelectorAll('.answers');
+
+    // keep track of user's answers
+    let numCorrect = 0;
+
+    // for each question...
+    myQuestions.forEach( (currentQuestion, questionNumber) => {
+
+      // find selected answer
+      const answerContainer = answerContainers[questionNumber];
+      const selector = `input[name=question${questionNumber}]:checked`;
+      const userAnswer = (answerContainer.querySelector(selector) || {}).value;
+
+      // if answer is correct
+      if(userAnswer === currentQuestion.correctAnswer){
+        // add to the number of correct answers
+        numCorrect++;
+
+        // color the answers green
+        answerContainers[questionNumber].style.color = 'lightgreen';
+      }
+      // if answer is wrong or blank
+      else{
+        // color the answers red
+        answerContainers[questionNumber].style.color = 'red';
+      }
+    });
+
+    // show number of correct answers out of total
+    resultsContainer.innerHTML = `${numCorrect} out of ${myQuestions.length}`;
+  }
+
+  function showSlide(n) {
+    slides[currentSlide].classList.remove('active-slide');
+    slides[n].classList.add('active-slide');
+    currentSlide = n;
+    if(currentSlide === 0){
+      previousButton.disabled = true;
+    }
+    else{
+      previousButton.disabled = false;
+      previousButton.style.display = 'inline-block';
+    }
+    if(currentSlide === slides.length-1){
+      nextButton.style.display = 'none';
+      submitButton.style.display = 'inline-block';
+    }
+    else{
+      nextButton.style.display = 'inline-block';
+      submitButton.style.display = 'none';
+    }
+  }
+
+  function showNextSlide() {
+    showSlide(currentSlide + 1);
+  }
+
+  function showPreviousSlide() {
+    showSlide(currentSlide - 1);
+  }
+
+
+  // Variables
+  const quizContainer = document.getElementById('quiz');
+  const resultsContainer = document.getElementById('results');
+  const submitButton = document.getElementById('submit');
+  const myQuestions = [
+    {
+      question: "Who invented JavaScript?",
+      answers: {
+        a: "Douglas Crockford",
+        b: "Sheryl Sandberg",
+        c: "Brendan Eich"
+      },
+      correctAnswer: "c"
+    },
+    {
+      question: "Which one of these is a JavaScript package manager?",
+      answers: {
+        a: "Node.js",
+        b: "TypeScript",
+        c: "npm"
+      },
+      correctAnswer: "c"
+    },
+    {
+      question: "Which tool can you use to ensure code quality?",
+      answers: {
+        a: "Angular",
+        b: "jQuery",
+        c: "RequireJS",
+        d: "ESLint"
+      },
+      correctAnswer: "d"
+    },
+    {
+      question: "cau 5?",
+      answers: {
+        a: "Node.js",
+        b: "TypeScript",
+        c: "npm"
+      },
+      correctAnswer: "c"
+    },
+    {
+      question: "cau 6?",
+      answers: {
+        a: "Angular",
+        b: "jQuery",
+        c: "RequireJS",
+        d: "ESLint"
+      },
+      correctAnswer: "d"
+    }
+  ];
+
+  // Kick things off
+  buildQuiz();
+
+  // Pagination
+  const previousButton = document.getElementById("previous");
+  const nextButton = document.getElementById("next");
+  const slides = document.querySelectorAll(".slide");
+  let currentSlide = 0;
+
+  // Show the first slide
+  showSlide(currentSlide);
+
+  // Event listeners
+  submitButton.addEventListener('click', showResults);
+  previousButton.addEventListener("click", showPreviousSlide);
+  nextButton.addEventListener("click", showNextSlide);
+})();
+
+</script>
+</body>
+</html>
